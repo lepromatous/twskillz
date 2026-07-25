@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# harness/hooks/pre_commit.sh — the last deterministic barrier before anything lands.
+#
+# Everything here is a constraint the agent cannot talk its way past. Anything that
+# is merely a preference belongs in AGENTS.md instead.
+set -uo pipefail
+CHANGED=$(git diff --cached --name-only)
+
+# 1. The spec is not editable by the thing being tested.
+python3 harness/check_deny.py $CHANGED || exit 1
+
+# 2. No suppressions smuggled in to clear a gate.
+if git diff --cached -U0 | grep -nE '^\+.*(# *type: *ignore|# *noqa|\.skip\(|xit\(|@unittest\.skip)'; then
+  echo "Suppression added in this diff. Fix the finding, do not silence it." >&2
+  exit 1
+fi
+exit 0

@@ -1,0 +1,59 @@
+name: {{ project.name }}-loop
+
+on:
+{% if trigger.is_schedule %}  schedule:
+    - cron: "{{ trigger.cron }}"
+{% endif %}{% if trigger.is_push %}  push:
+    branches: [main]
+{% endif %}  workflow_dispatch:
+    inputs:
+      level:
+        description: "Autonomy level (L1|L2|L3)"
+        required: true
+        default: "L1"
+
+concurrency:
+  # Two runs on one branch fight over the worktree and produce a diff neither intended.
+  group: {{ project.name }}-loop-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  verify:
+    # The deterministic half. No model, no tokens, no network. Runs on pull requests
+    # too, so the loop and the humans are held to exactly the same gates.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Denylist
+        run: |
+          git fetch origin ${{ github.base_ref || 'main' }} --depth=1
+          python3 harness/check_deny.py $(git diff --name-only FETCH_HEAD...HEAD) || true
+      - name: Gates
+        run: {{ verify.command }}
+
+  loop:
+    # The agentic half. Never runs on pull_request -- an agent that reacts to PR
+    # contents is an agent executing text written by whoever opened the PR.
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Run the loop
+        env:
+          LOOP_AGENT_CMD: ${{ vars.LOOP_AGENT_CMD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bash harness/run_loop.sh --goal {{ goal.name }} --level "${{ inputs.level || 'L1' }}"
+      - name: Commit state and ledger
+        if: always()
+        run: |
+          git config user.name "{{ project.name }}-loop"
+          git config user.email "loop@users.noreply.github.com"
+          git add STATE.md loop-run-log.md || true
+          git diff --cached --quiet || git commit -m "loop: state + ledger [skip ci]"
+          git push || true

@@ -1,0 +1,9 @@
+{
+  "name": "loop-forge",
+  "description": "Designs and generates agentic loops. Interviews for the unit of work and the verifier, writes a reviewable LOOPSPEC.yaml, then scaffolds the loop files. Refuses to generate when no machine-checkable stop condition exists.",
+  "version": "1.0.0",
+  "author": {
+    "name": "TODO: your name"
+  },
+  "keywords": ["loop-engineering", "harness-engineering", "agents", "verification"]
+}

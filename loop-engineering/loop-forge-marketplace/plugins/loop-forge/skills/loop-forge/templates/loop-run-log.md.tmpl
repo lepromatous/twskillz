@@ -1,0 +1,20 @@
+# loop-run-log.md — {{ project.name }}
+
+Append-only. The loop writes; nothing rewrites. This ledger is the dataset you tune the
+harness from — a loop that can revise its own history cannot be audited.
+
+| run id | goal | attempts | first failing gate | outcome | notes |
+|---|---|---|---|---|---|
+| _(none yet)_ | | | | | |
+
+Outcomes: `shipped` · `escalated` · `reverted` · `halted-deny`
+
+## Review weekly
+
+Two questions, and they are the whole point of keeping this file:
+
+1. **Which gate fails most?** It is either doing its job or badly specified. The fix is
+   nearly always a better fixture, not a longer prompt.
+2. **Which failures recurred after a rule went into `AGENTS.md`?** Those rules failed. Move
+   them into the verifier and delete the prose — a request that gets ignored twice is not a
+   control.

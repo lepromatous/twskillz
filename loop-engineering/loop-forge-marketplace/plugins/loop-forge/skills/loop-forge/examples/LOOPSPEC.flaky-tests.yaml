@@ -1,0 +1,31 @@
+# A minimal loop for a project that already has tests — the easy case.
+# Six lines of real content. Start here if the team is sceptical.
+project:
+  name: api-service
+  description: Python API service with an existing pytest suite.
+
+size: minimal
+
+goal:
+  name: fix-one-failing-test
+  unit: One failing or flaky test made reliably green, without changing the test.
+
+verify:
+  pattern: test-suite
+  command: pytest -q
+  gates:
+    - {id: G0, name: lint, cmd: "ruff check src", blocking: true}
+    - {id: G1, name: types, cmd: "mypy src", blocking: true}
+    - {id: G2, name: tests, cmd: "pytest -q", blocking: true}
+    - {id: G3, name: no flakes, cmd: "pytest -q --count=3", blocking: true}
+
+deny:
+  # The tests are the criteria. An agent told to make tests pass will edit tests.
+  - "tests/**"
+  - "conftest.py"
+  - "**/.env*"
+  - "migrations/**"
+
+autonomy: {default: L1}
+trigger: {type: manual}
+stop: {max_attempts: 5, no_progress: 3}
