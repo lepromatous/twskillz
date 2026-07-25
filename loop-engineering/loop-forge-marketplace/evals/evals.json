@@ -1,0 +1,23 @@
+{
+  "skill_name": "loop-forge",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I want to set up a loop for our nightly data pipeline. It loads three Snowflake tables and writes a summary table. I'm tired of checking it every morning.",
+      "expected_output": "Interviews for the unit of work and the verifier; recognises Pattern 3 (invariants) and proposes reconciliation plus row-count checks; produces a LOOPSPEC with L1 autonomy and a denylist covering the checks themselves; generates a standard-size loop.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Can you make me a loop that writes our weekly customer newsletter automatically?",
+      "expected_output": "Declines to build a full loop, or proposes Pattern 7/8 with an explicit human gate. Explains that original prose has no machine-checkable done condition and that a loop here would generate unreviewed output. Offers a skill file plus ordinary prompting as the better tool.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Here's our repo. We've got pytest and ruff in CI already. Set up a loop that fixes flaky tests overnight.",
+      "expected_output": "Infers the verifier from existing CI rather than asking; interview is short (two or three questions); puts tests/ and conftest.py on the denylist and explains why; defaults to L1 and says so; generates minimal or standard size.",
+      "files": []
+    }
+  ]
+}

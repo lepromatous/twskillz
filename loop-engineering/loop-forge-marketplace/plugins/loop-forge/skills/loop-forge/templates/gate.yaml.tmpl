@@ -1,0 +1,39 @@
+# gate.yaml — {{ project.name }}
+# Mechanical enforcement. The difference between "the agent was told not to" and
+# "the agent cannot".
+
+version: 1
+
+autonomy:
+  default: {{ autonomy.default }}
+{% if autonomy.has_per_goal %}  per_goal:
+{% for p in autonomy.per_goal_list %}    {{ p.key }}: {{ p.value }}
+{% endfor %}{% endif %}
+deny:
+  # Everything the verifier reads to decide. If the agent can edit any of these, a
+  # green result means nothing at all. Checked BEFORE verification runs.
+{% for d in deny %}  - "{{ d }}"
+{% endfor %}
+gates:
+  blocking: [{{ verify.blocking_ids }}]
+{% if verify.has_advisory %}  advisory: [{{ verify.advisory_ids }}]
+  # Advisory gates escalate to blocking only at this severity. Never let a model's
+  # opinion be the sole thing between the loop and the main branch.
+  advisory_blocks_at: high
+{% endif %}
+stop_rules:
+  max_attempts_per_goal: {{ stop.max_attempts }}
+  no_progress_repeats: {{ stop.no_progress }}
+  halt_on_deny_touch: true
+
+commands:
+  deny:
+    - "git push --force*"
+    - "git reset --hard*"
+    - "rm -rf*"
+    - "curl * | *"
+
+escalation:
+  # An escalation a human cannot act on in two minutes is a bug in the loop.
+  include: [goal, attempt_count, all_gate_output, diff, worktree_path]
+  channel: "TODO: fill in before running unattended"

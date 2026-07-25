@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+#
+# harness/run_loop.sh -- the outer loop for {{ project.name }}.
+#
+# This is the loop. It is not the agent, and the agent does not control it.
+# Each iteration:
+#   1. builds a FRESH brief from STATE.md + the failing gate text
+#   2. hands it to the agent, in an isolated worktree
+#   3. runs the verifier
+#   4. checks the stop rules BEFORE deciding to go again
+#
+# Point 1 is the one people get wrong. A loop that carries a growing conversation
+# forward degrades as the window fills. A loop that rebuilds itself from disk each
+# time runs at constant quality. The agent forgets; the repository does not.
+#
+# Usage: harness/run_loop.sh --goal {{ goal.name }} [--level L1]
+
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; cd "$ROOT"
+
+GOAL="{{ goal.name }}"; LEVEL="{{ autonomy.default }}"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --goal)  GOAL="$2";  shift 2 ;;
+    --level) LEVEL="$2"; shift 2 ;;
+    *) echo "unknown flag: $1" >&2; exit 3 ;;
+  esac
+done
+
+MAX={{ stop.max_attempts }}
+NOPROG={{ stop.no_progress }}
+RUN_ID="run-$(date +%Y%m%d-%H%M%S)"
+WT=".loop/worktrees/$RUN_ID"
+mkdir -p .loop/runs .loop/worktrees
+
+echo "== $RUN_ID | goal=$GOAL | autonomy=$LEVEL | ceiling=$MAX"
+
+# One worktree per run. Two agents editing one checkout is the same problem as two
+# engineers pushing to the same lines without talking.
+git worktree add -q -b "loop/$RUN_ID" "$WT" 2>/dev/null || {
+  echo "could not create worktree -- is this a clean git repo?" >&2; exit 3; }
+trap 'git worktree remove --force "$WT" 2>/dev/null || true' EXIT
+
+attempt=0; prev=""; repeat=0
+
+while (( attempt < MAX )); do
+  attempt=$(( attempt + 1 ))
+  echo "-- attempt $attempt/$MAX"
+
+  # 1. Build the brief from disk, not from history.
+  BRIEF=".loop/runs/$RUN_ID-a$attempt.md"
+  {
+    echo "# Goal: $GOAL"
+    echo "# One unit of work: {{ goal.unit }}"
+    echo; echo "## Standing rules"; [[ -f AGENTS.md ]] && cat AGENTS.md
+    echo; echo "## State"; cat STATE.md
+    echo; echo "## Failing gates from the previous attempt"
+    if [[ -f .loop/last-failure.txt ]]; then cat .loop/last-failure.txt
+    else echo "(none -- first attempt)"; fi
+    echo; echo "## Instructions"
+    echo "Fix the failing gates. Do not edit anything in gate.yaml:deny."
+    echo "Do not loosen a threshold. Return when this exits zero:"
+    echo "  {{ verify.command }}"
+  } > "$BRIEF"
+
+  # 2. Hand off. Set LOOP_AGENT_CMD to your agent CLI -- the shape matters, not the vendor:
+  #      claude -p --agent implementer
+  #      codex exec
+  #      opencode run
+  if [[ -z "${LOOP_AGENT_CMD:-}" ]]; then
+    echo "   LOOP_AGENT_CMD not set -- dry run, verifying current tree only"
+  else
+    ( cd "$WT" && eval "$LOOP_AGENT_CMD" < "$BRIEF" ) || true
+  fi
+
+  # 3. Denylist BEFORE verification. If the agent edited the criteria, a green
+  #    gate set is meaningless, so order matters here.
+  if [[ -f harness/check_deny.py ]]; then
+    CHANGED=$( cd "$WT" && git diff --name-only HEAD )
+    python3 harness/check_deny.py $CHANGED || {
+      echo "HALT: diff touches a denylisted path. Escalating." >&2
+      printf '| %s | %s | %d | -- | halted-deny | %s |\n' \
+        "$RUN_ID" "$GOAL" "$attempt" "$CHANGED" >> loop-run-log.md 2>/dev/null || true
+      exit 1; }
+  fi
+
+  # 4. Verify.
+  set +e
+  ( cd "$WT" && {{ verify.command }} ) > .loop/last-failure.txt 2>&1
+  rc=$?
+  set -e
+
+  if (( rc == 0 )); then
+    echo "   all blocking gates green"
+    case "$LEVEL" in
+      L1) echo "   L1: report only. Diff is in $WT. Nothing committed." ;;
+      L2) ( cd "$WT" && git add -A && git commit -qm "loop($GOAL): $RUN_ID" )
+          echo "   L2: committed to branch loop/$RUN_ID. Open a PR and read it." ;;
+      L3) echo "   L3: merge per gate.yaml allowlist." ;;
+    esac
+    printf '| %s | %s | %d | none | shipped | -- |\n' \
+      "$RUN_ID" "$GOAL" "$attempt" >> loop-run-log.md 2>/dev/null || true
+    exit 0
+  fi
+
+  # 5. Stop rules.
+  h=$(sha256sum .loop/last-failure.txt | cut -d' ' -f1)
+  if [[ "$h" == "$prev" ]]; then repeat=$(( repeat + 1 )); else repeat=0; fi
+  prev="$h"
+
+  # The most common real failure, and the most expensive, because from the outside
+  # it is indistinguishable from persistence.
+  if (( repeat >= NOPROG - 1 )); then
+    echo "HALT: identical failure $NOPROG times. The agent cannot act on this signal." >&2
+    echo "      Fix the gate message or the fixture -- not the prompt." >&2
+    cat .loop/last-failure.txt >&2
+    printf '| %s | %s | %d | see log | escalated | no-progress |\n' \
+      "$RUN_ID" "$GOAL" "$attempt" >> loop-run-log.md 2>/dev/null || true
+    exit 1
+  fi
+done
+
+echo "HALT: attempt ceiling ($MAX) reached." >&2
+cat .loop/last-failure.txt >&2
+printf '| %s | %s | %d | see log | escalated | ceiling |\n' \
+  "$RUN_ID" "$GOAL" "$attempt" >> loop-run-log.md 2>/dev/null || true
+exit 1

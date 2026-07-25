@@ -1,0 +1,38 @@
+# AGENTS.md — {{ project.name }}
+
+Pilot's checklist, not a style guide. Every line lands in the system prompt on every turn and
+competes for attention with every other line. Under 60 lines.
+
+**Each rule should end with the run that earned it.** No run id means it was brainstormed
+rather than ratcheted — delete it.
+
+## Project
+
+- {{ project.description }} [seed]
+- One unit of work: {{ goal.unit }} [seed]
+
+## Hard boundaries
+
+- Never edit anything matched by `gate.yaml: deny`. Those files are what you are judged
+  against. Editing them is not a shortcut, it is a hard stop that pages a human. [seed]
+- Never add a suppression — `skip`, `xfail`, `# type: ignore`, `# noqa` — to clear a gate.
+  Fix the finding or report that you cannot. [seed]
+- Never loosen a threshold or tolerance to make a check pass. [seed]
+
+## Working style
+
+- Read `STATE.md` first, every run. It is the only thing that survives your context. [seed]
+- Run `{{ verify.command }}` before claiming done. A claim is not evidence. [seed]
+- One goal per run. Log unrelated findings under `## Observed, not actioned` in `STATE.md`
+  rather than fixing them. [seed]
+- If the same gate fails twice with identical text, stop and say what is underspecified. A
+  third identical attempt trips the no-progress rule and wastes the run. Being stuck is
+  information. [seed]
+- Update `STATE.md` before you finish. The next attempt is a fresh context with no memory of
+  this one, and that file is all it inherits. [seed]
+
+<!--
+  RATCHET LOG — append as the loop produces real failures.
+  Before adding a line here, ask whether it belongs in the verifier instead.
+  A gate is a constraint; a line in this file is a request.
+-->

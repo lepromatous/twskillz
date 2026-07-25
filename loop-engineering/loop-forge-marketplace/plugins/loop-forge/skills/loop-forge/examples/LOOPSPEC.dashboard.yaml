@@ -1,0 +1,49 @@
+project:
+  name: bench-dashboard
+  description: >
+    App in the Bench stack that takes uploaded files and renders a dashboard.
+    Plots live in app/examples/.
+
+size: standard
+
+goal:
+  name: add-one-plot
+  unit: >
+    One plot added: contract, implementation, and a blessed reference render,
+    registered in the manifest.
+
+verify:
+  pattern: golden-outputs
+  command: python3 harness/verify.py --all
+  gates:
+    - {id: L0, name: lint and types, cmd: "ruff check app && mypy app", blocking: true}
+    - {id: L1, name: contract wiring, cmd: "python3 harness/check_contracts.py", blocking: true}
+    - {id: L2, name: renders from fixture, cmd: "python3 harness/render_all.py", blocking: true}
+    - {id: L3, name: diff vs golden, cmd: "python3 harness/diff_goldens.py", blocking: true}
+  advisory:
+    - id: L5
+      name: legibility and accessibility
+      rubric: Readable at 480px, axes labelled with units, distinguishable under deuteranopia.
+
+deny:
+  - "app/examples/**/contract.yaml"
+  - "app/examples/**/golden.png"
+  - "harness/**"
+  - "gate.yaml"
+  - "**/.env*"
+
+autonomy:
+  default: L1
+  per_goal: {add-one-plot: L2}
+
+trigger:
+  type: schedule
+  cron: "0 8 * * 1-5"
+
+stop:
+  max_attempts: 6
+  no_progress: 3
+
+notes:
+  stubbed:
+    - "Bench runtime target unknown - deployment smoke gate not yet written"

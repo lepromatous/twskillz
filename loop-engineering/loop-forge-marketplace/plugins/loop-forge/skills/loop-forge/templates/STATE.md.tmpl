@@ -1,0 +1,40 @@
+# STATE.md
+
+The durable spine. The agent forgets between runs; this file does not. Rebuilt into context
+at the start of every attempt.
+
+**Anything not written here did not happen.**
+
+---
+
+## Current goal
+
+`{{ goal.name }}` — {{ goal.unit }}
+
+- Autonomy: **{{ autonomy.default }}**
+- Attempts: 0 / {{ stop.max_attempts }}
+- Last run: none
+
+## Done
+
+_(nothing yet)_
+
+## Next
+
+1. _(first unit of work — fill this in, or let the first run discover it)_
+
+## Blocked
+
+{% if notes.has_stubbed %}{% for s in notes.stubbed %}- {{ s }}
+{% endfor %}{% endif %}{% if notes.no_stubbed %}_(nothing)_
+{% endif %}
+## Observed, not actioned
+
+_(incidental findings the loop noticed but left alone — scope creep inside a loop is how a
+six-line diff becomes unreviewable)_
+
+## Decisions
+
+| Date | Decision | Why |
+|---|---|---|
+| — | Verifier pattern: `{{ verify.pattern }}` | see LOOP.md section 3 |

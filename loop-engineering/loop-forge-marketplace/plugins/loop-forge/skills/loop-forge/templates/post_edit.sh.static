@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# harness/hooks/post_edit.sh — fires after every file edit the agent makes.
+#
+# The cheapest possible feedback, delivered at the moment the mistake is made rather
+# than six steps later. Success is silent: if this passes the agent hears nothing and
+# the check costs no context. If it fails, the error text goes straight into the loop.
+set -uo pipefail
+FILE="${1:-}"
+[[ -n "$FILE" ]] || exit 0
+
+# Swap in your project's formatter and fast linter.
+if command -v ruff >/dev/null 2>&1 && [[ "$FILE" == *.py ]]; then
+  ruff check --quiet "$FILE" || exit 1   # verbose on failure -- this text IS the next prompt
+  ruff format --quiet "$FILE"            # auto-fix whitespace so no tokens are spent on it
+fi
+exit 0
