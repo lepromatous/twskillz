@@ -16,6 +16,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = ROOT.parent.parent
 FAILS: list[str] = []
 
 
@@ -26,13 +27,13 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 # --- catalog and manifests are well-formed ---------------------------------- #
 try:
-    mkt = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text())
+    mkt = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text())
     check("marketplace.name", "name" in mkt, "missing")
     check("marketplace.plugins", bool(mkt.get("plugins")), "no plugins listed")
     for p in mkt.get("plugins", []):
         check("plugin entry", "name" in p and "source" in p,
               f"{p} needs both name and source")
-        check("plugin source exists", (ROOT / p.get("source", "")).is_dir(),
+        check("plugin source exists", (REPO_ROOT / p.get("source", "")).is_dir(),
               f"{p.get('source')} not found")
 except Exception as e:
     check("marketplace.json", False, f"will not parse: {e}")

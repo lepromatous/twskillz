@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "loop-forge",
-      "source": "./plugins/loop-forge",
+      "source": "./loop-engineering/loop-forge-marketplace/plugins/loop-forge",
       "description": "Designs and generates a complete agentic loop for a project by interviewing for what 'done' means, then scaffolding LOOP.md, STATE.md, a verifier, gate.yaml, subagents and a CI trigger.",
       "version": "1.0.0",
       "category": "workflow",

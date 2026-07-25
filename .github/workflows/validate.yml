@@ -11,4 +11,5 @@ jobs:
         with: {python-version: "3.12"}
       - run: pip install pyyaml
       - name: Repo verifier
+        working-directory: loop-engineering/loop-forge-marketplace
         run: python scripts/validate.py
